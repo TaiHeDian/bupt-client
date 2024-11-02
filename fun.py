@@ -35,7 +35,7 @@ def time_name():
     now_str = str(now)
     now_str = now_str.replace(':', '.')
     now_str = now_str[:18]
-    fp = 'output/' + f'''{now_str}.csv'''
+    fp = './' + f'''{now_str}.csv'''
     return fp
 
 
