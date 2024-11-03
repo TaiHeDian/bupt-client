@@ -33,55 +33,68 @@ class Mine(UiDialog, QMainWindow):
     def __init__(self=None, parent=None):
         super(Mine, self).__init__(parent)
 
+        # Network related
+        self.host = ''
+        self.client = None
+        self.enable = False
+
+        # Timer related
+        self.timer = None
+        self.receive_timer = None
+
+        # Plot related
+        self.plot_plt = None
+        self.layout = None
+
+        # Data related
         self.data_list = [np.random.uniform(1, 500) for _ in range(COUNT)]
-        self.filename = ""
         self.array = deque(maxlen=COUNT)
         self.new_data = deque()
+        self.filename: str = ""
+
+        # UI setup
         self.setup_ui(self)
         self.setCentralWidget(self.main_container)
-        self.enable = False
+
+        # Button connections
         self.start_button.clicked.connect(self.fun_pushbutton_start)
         self.stop_button.clicked.connect(self.fun_pushbutton_close)
         self.data_button.clicked.connect(self.fun_pushbutton_data)
         self.connect_button.clicked.connect(self.fun_pushbutton_link)
+
+        # Initial setup
         self.set_plot()
-        self.check_link = False
 
     def fun_pushbutton_start(self):
-        global client
         self.enable = True
-        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         if self.enable:
             self.filename = time_name()
             print(self.enable)
-            client.connect((HOST, PORT))
+            self.client.connect((self.host, PORT))
             self.textEdit.setText('开启中')
-            self.start(client)
+            self.start()
         else:
             self.textEdit.setText('请先连接正确的设备')
         print(self.enable)
 
     def fun_pushbutton_close(self):
         self.enable = False
-        client.close()
+        self.client.close()
         self.receive_timer.stop()
         self.textEdit.setText('已关闭')
 
     def fun_pushbutton_data(self):
         with open(self.filename, 'r') as f:
             reader = csv.reader(f)
-            list_data = list(reader)
-            f.close()
-        for i in range(len(list_data)):
-            list_data[i] = float(list_data[i][0])
+            data_list = [float(row[0]) for row in reader if row]
 
         all_plt = pg.plot()
         all_plt.setXRange(0, 2000)
         all_plt.showGrid(x=True, y=True)
-        all_plt.plot(list_data, pen='w')
+        all_plt.plot(data_list, pen='w')
 
     def fun_pushbutton_link(self):
-        global HOST
         output = subprocess.check_output(cmd, shell=True).decode('gbk')
         ssid = re.search('SSID\\s+:\\s(.+)', output)
         ssid = ssid.group(1)[:-1]
@@ -91,39 +104,17 @@ class Mine(UiDialog, QMainWindow):
             self.textEdit.repaint()
             text_ip = self.textEdit_2.toPlainText()
             print(text_ip.isspace())
-            HOST = text_ip
-            self.textEdit.setText(f'''连接设备IP:{HOST}''')
+            self.host = text_ip
+            self.textEdit.setText(f'''连接设备IP:{self.host}''')
         else:
             self.textEdit.setText(f'''请连接正确的wifi,当前{ssid}''')
 
-    def start(self, client):
-        # while self.enable:
-        #     try:
-        #         array = receive_data(client)
-        #         # draw_matplotlib(array,self.ax,self.fig)
-        #
-        #         print(self.enable)
-        #
-        #     except Exception as e:
-        #         client.connect((HOST, PORT))
-        #         print(e)
-
+    def start(self):
         self.receive_timer = QtCore.QTimer(self)
         self.receive_timer.timeout.connect(self.pyqtgraph_start)
         self.receive_timer.start(9)
 
     def set_plot(self):
-        # # 创建画布
-        # self.fig=plt.figure()
-        #
-        # self.canvas=FigureCanvasQTAgg(self.fig)
-        # # 画布放进widget组件，设定位置
-        # self.vlayout=QVBoxLayout()
-        # self.vlayout.addWidget(self.canvas)
-        # self.widget.setLayout(self.vlayout)
-        # #初始化matplotlib显示区域
-        # self.ax=self.fig.add_subplot(111)
-
         pg.setConfigOptions(antialias=True)
         self.layout = QtWidgets.QGridLayout(self.plot_widget)
         self.plot_plt = pg.PlotWidget(self.plot_widget)
@@ -151,7 +142,7 @@ class Mine(UiDialog, QMainWindow):
         self.plot_plt.plot().setData(self.array, pen='g')
 
     def pyqtgraph_start(self):
-        self.array = receive_data(client, self.filename)
+        self.array = receive_data(self.client, self.filename)
         self.array = moving_average(self.array, 20)
         self.plot_plt.setXRange(0, 5000)
         self.plot_plt.clearPlots()

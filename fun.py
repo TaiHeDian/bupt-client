@@ -37,9 +37,12 @@ def receive_data(client, filename):
 
 def time_name():
     """
-    Generate a timestamp-based filename for CSV data.
-    Returns:
-        str: Filename with format './YYYY-MM-DD HH.MM.SS.csv'
+    为 CSV 数据生成基于时间戳的文件名
+
+    Returns
+    -------
+    str
+        文件名格式 './YYYY-MM-DD HH.MM.SS.csv'
     """
     return f"./{datetime.datetime.now().strftime('%Y-%m-%d %H.%M.%S')}.csv"
 
@@ -51,12 +54,19 @@ def save_data(data, filename):
 
 def moving_average(data, window_size):
     """
-    Calculate moving average with numpy's convolve function
-    Args:
-        data: Input data array
-        window_size: Size of the moving window
-    Returns:
-        Smoothed data array
+    计算移动平均值
+
+    Parameters
+    ----------
+    data : array_like
+        输入数据数组
+    window_size : int
+        移动窗口大小
+
+    Returns
+    -------
+    ndarray
+        平滑后的数据数组
     """
     window = np.ones(window_size) / window_size
     return np.convolve(data, window, mode='same')
