@@ -1,3 +1,8 @@
+"""
+Title: fun.py
+Author: 吴烨辰
+LastEditors: 高迎新
+"""
 import struct
 import datetime
 
@@ -25,46 +30,81 @@ def receive_data(client, filename):
         data_deque.append(force_value)
         new_data[i] = force_value
 
-    save(new_data, filename)
+    save_data(new_data, filename)
     print(data_deque)
     return data_deque
 
 
 def time_name():
-    now = datetime.datetime.now()
-    now_str = str(now)
-    now_str = now_str.replace(':', '.')
-    now_str = now_str[:18]
-    fp = './' + f'''{now_str}.csv'''
-    return fp
+    """
+    Generate a timestamp-based filename for CSV data.
+    Returns:
+        str: Filename with format './YYYY-MM-DD HH.MM.SS.csv'
+    """
+    return f"./{datetime.datetime.now().strftime('%Y-%m-%d %H.%M.%S')}.csv"
 
 
-def save(data, filename):
+def save_data(data, filename):
     data = np.array(data).reshape(-1, 1)
     np.savetxt(filename, data, delimiter=',', fmt='%g')
 
 
-def moving_average(interval, window_size):
-    window = np.ones(int(window_size)) / float(window_size)
-    re = np.convolve(interval, window, 'same')
-    return re
+def moving_average(data, window_size):
+    """
+    Calculate moving average with numpy's convolve function
+    Args:
+        data: Input data array
+        window_size: Size of the moving window
+    Returns:
+        Smoothed data array
+    """
+    window = np.ones(window_size) / window_size
+    return np.convolve(data, window, mode='same')
 
 
-def wifi_connect():
-    ssid = 'ESP32'
-    password = '123456789'
-    wifi = pywifi.PyWiFi()
-    iface = wifi.interfaces()[0]
-    iface.disconnect()
-    profile = pywifi.Profile()
-    profile.ssid = ssid
-    profile.auth = const.AUTH_ALG_OPEN
-    profile.akm.append(const.AKM_TYPE_WPA2PSK)
-    profile.cipher = const.CIPHER_TYPE_CCMP
-    profile.key = password
-    iface.remove_all_network_profiles()
-    tmp_profile = iface.add_network_profile(profile)
-    iface.connect(tmp_profile)
-    iface.disconnect()
-    iface.connect(tmp_profile)
-    return iface.status() == const.IFACE_CONNECTED
+def wifi_connect(ssid='ESP32', password='123456789', max_retries=3):
+    """
+    连接到Wi-Fi网络
+
+    Parameters
+    ----------
+    ssid : str, optional
+        网络名称 (默认: 'ESP32')
+    password : str, optional
+        网络密码 (默认: '123456789') 
+    max_retries : int, optional
+        最大重试连接次数 (默认: 3)
+
+    Returns
+    -------
+    bool
+        连接成功返回True，失败返回False
+    """
+    try:
+        wifi = pywifi.PyWiFi()
+        iface = wifi.interfaces()[0]
+        iface.disconnect()  # Ensure disconnected from any network
+        
+        # Configure network profile
+        profile = pywifi.Profile()
+        profile.ssid = ssid
+        profile.auth = const.AUTH_ALG_OPEN
+        profile.akm.append(const.AKM_TYPE_WPA2PSK)
+        profile.cipher = const.CIPHER_TYPE_CCMP
+        profile.key = password
+        
+        # Remove existing profiles and add new one
+        iface.remove_all_network_profiles()
+        tmp_profile = iface.add_network_profile(profile)
+        
+        # Try connecting with retries
+        for _ in range(max_retries):
+            iface.connect(tmp_profile)
+            if iface.status() == const.IFACE_CONNECTED:
+                return True
+        
+        return False
+        
+    except Exception as e:
+        print(f"Wi-Fi连接失败: {e}")
+        return False

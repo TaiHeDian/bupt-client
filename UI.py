@@ -1,3 +1,8 @@
+"""
+Title: UI.py
+Author: 吴烨辰
+LastEditors: 高迎新
+"""
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 
