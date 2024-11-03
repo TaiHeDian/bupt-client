@@ -19,7 +19,7 @@ from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtWidgets import QMainWindow, QApplication
 
 from fun import time_name, receive_data, moving_average
-from UI import UiDialog
+from Ui import UiDialog
 
 PORT = 9000
 BUFF = 1024
@@ -38,12 +38,12 @@ class Mine(UiDialog, QMainWindow):
         self.array = deque(maxlen=COUNT)
         self.new_data = deque()
         self.setup_ui(self)
-        self.setCentralWidget(self.main_widget)
+        self.setCentralWidget(self.main_container)
         self.enable = False
-        self.pushButton_start.clicked.connect(self.fun_pushbutton_start)
-        self.pushButton_close.clicked.connect(self.fun_pushbutton_close)
-        self.pushButton_data.clicked.connect(self.fun_pushbutton_data)
-        self.pushButton_link.clicked.connect(self.fun_pushbutton_link)
+        self.start_button.clicked.connect(self.fun_pushbutton_start)
+        self.stop_button.clicked.connect(self.fun_pushbutton_close)
+        self.data_button.clicked.connect(self.fun_pushbutton_data)
+        self.connect_button.clicked.connect(self.fun_pushbutton_link)
         self.set_plot()
         self.check_link = False
 
@@ -125,8 +125,8 @@ class Mine(UiDialog, QMainWindow):
         # self.ax=self.fig.add_subplot(111)
 
         pg.setConfigOptions(antialias=True)
-        self.layout = QtWidgets.QGridLayout(self.widget_plot)
-        self.plot_plt = pg.PlotWidget(self.widget_plot)
+        self.layout = QtWidgets.QGridLayout(self.plot_widget)
+        self.plot_plt = pg.PlotWidget(self.plot_widget)
         self.plot_plt.showGrid(x=True, y=True)
         self.plot_plt.setLabel('left', '压力值(KPa)')
         self.layout.addWidget(self.plot_plt)
