@@ -49,7 +49,10 @@ def time_name():
 
 def save_data(data, filename):
     data = np.array(data).reshape(-1, 1)
-    np.savetxt(filename, data, delimiter=',', fmt='%g')
+    try:
+        np.savetxt(filename, data, delimiter=',', fmt='%g')
+    except Exception as e:
+        print(f'保存数据到{filename}时出错: {str(e)}')
 
 
 def moving_average(data, window_size):

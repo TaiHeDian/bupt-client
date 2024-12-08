@@ -30,12 +30,10 @@ the_mac = 'ec-62-60-fe-81-98'
 
 class Mine(UiDialog, QMainWindow):
 
-    def __init__(self=None, parent=None):
-        super(Mine, self).__init__(parent)
+    def __init__(self):
+        super(Mine, self).__init__()
 
         # Network related
-        self.host = ''
-        self.client = None
         self.enable = False
 
         # Timer related
@@ -66,23 +64,31 @@ class Mine(UiDialog, QMainWindow):
         self.set_plot()
 
     def fun_pushbutton_start(self):
+        global client
         self.enable = True
-        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         if self.enable:
             self.filename = time_name()
-            print(self.enable)
-            self.client.connect((self.host, PORT))
-            self.textEdit.setText('开启中')
-            self.start()
+            try:
+                print(self.enable)
+                client.connect((HOST, PORT))
+                self.status_field.setText('开启中')
+                self.start()
+            except Exception as e:
+                self.status_field.setText('连接失败')
+                print(e)
         else:
-            self.textEdit.setText('请先连接正确的设备')
-        print(self.enable)
+            self.status_field.setText('请先连接正确的设备')
 
     def fun_pushbutton_close(self):
         self.enable = False
-        self.client.close()
-        self.receive_timer.stop()
-        self.textEdit.setText('已关闭')
+        try:
+            client.close()
+            self.receive_timer.stop()
+            self.status_field.setText('已关闭')
+        except Exception as e:
+            self.status_field.setText('已关闭')
+            print(e)
 
     def fun_pushbutton_data(self):
         with open(self.filename, 'r') as f:
@@ -95,19 +101,20 @@ class Mine(UiDialog, QMainWindow):
         all_plt.plot(data_list, pen='w')
 
     def fun_pushbutton_link(self):
+        global HOST
         output = subprocess.check_output(cmd, shell=True).decode('gbk')
         ssid = re.search('SSID\\s+:\\s(.+)', output)
         ssid = ssid.group(1)[:-1]
         print(ssid)
         if ssid == 'wyc':
-            self.textEdit.setText('连接中，请稍后')
-            self.textEdit.repaint()
-            text_ip = self.textEdit_2.toPlainText()
+            self.status_field.setText('连接中，请稍后')
+            self.status_field.repaint()
+            text_ip = self.input_field.toPlainText()
             print(text_ip.isspace())
-            self.host = text_ip
-            self.textEdit.setText(f'''连接设备IP:{self.host}''')
+            HOST = text_ip
+            self.status_field.setText(f'''连接设备IP:{HOST}''')
         else:
-            self.textEdit.setText(f'''请连接正确的wifi,当前{ssid}''')
+            self.status_field.setText(f'''请连接正确的wifi,当前{ssid}''')
 
     def start(self):
         self.receive_timer = QtCore.QTimer(self)
@@ -142,11 +149,14 @@ class Mine(UiDialog, QMainWindow):
         self.plot_plt.plot().setData(self.array, pen='g')
 
     def pyqtgraph_start(self):
-        self.array = receive_data(self.client, self.filename)
-        self.array = moving_average(self.array, 20)
-        self.plot_plt.setXRange(0, 5000)
-        self.plot_plt.clearPlots()
-        self.plot_plt.plot().setData(self.array, pen='w')
+        try:
+            self.array = receive_data(client, self.filename)
+            self.array = moving_average(self.array, 20)
+            self.plot_plt.setXRange(0, 5000)
+            self.plot_plt.clearPlots()
+            self.plot_plt.plot().setData(self.array, pen='w')
+        except Exception as e:
+            print(e)
 
 
 if __name__ == '__main__':
