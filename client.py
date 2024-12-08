@@ -1,130 +1,126 @@
-"""
-Title: client.py
-Author: 吴烨辰
-LastEditors: 高迎新
-"""
+from socket import *
+from fun import *
+from UI import *
 import sys
-import re
-import csv
-import socket
-import subprocess
-
-import psutil
-import numpy as np
+from PyQt5.QtWidgets import QMainWindow
 import pyqtgraph as pg
-
-from collections import deque
-
-from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtWidgets import QMainWindow, QApplication
-
-from fun import time_name, receive_data, moving_average
-from Ui import UiDialog
+from PyQt5 import QtCore
+import psutil
+import traceback
+from get_ip import *
+import re
 
 PORT = 9000
-BUFF = 1024
-COUNT = 500
+BUFSIZ = 1024
+count = 500
 cmd = 'netsh wlan show interfaces'
 the_mac = 'ec-62-60-fe-81-98'
 
 
-class Mine(UiDialog, QMainWindow):
+class mine(Ui_Dialog, QMainWindow):
 
     def __init__(self):
-        super(Mine, self).__init__()
-
-        # Network related
-        self.enable = False
-
-        # Timer related
-        self.timer = None
-        self.receive_timer = None
-
-        # Plot related
-        self.plot_plt = None
-        self.layout = None
-
-        # Data related
-        self.data_list = [np.random.uniform(1, 500) for _ in range(COUNT)]
-        self.array = deque(maxlen=COUNT)
+        super(mine, self).__init__()
+        self.data_list = [np.random.uniform(1, 500) for i in range(500)]
+        self.filename = str()
+        self.array = deque(maxlen=500)
         self.new_data = deque()
-        self.filename: str = ""
-
-        # UI setup
-        self.setup_ui(self)
-        self.setCentralWidget(self.main_container)
-
-        # Button connections
-        self.start_button.clicked.connect(self.fun_pushbutton_start)
-        self.stop_button.clicked.connect(self.fun_pushbutton_close)
-        self.data_button.clicked.connect(self.fun_pushbutton_data)
-        self.connect_button.clicked.connect(self.fun_pushbutton_link)
-
-        # Initial setup
+        self.setupUi(self)
+        self.setCentralWidget(self.main_widget)
+        self.enable = False
+        self.pushButton.clicked.connect(self.fun_pushbutton)
+        self.pushButton_close.clicked.connect(self.fun_pushbutton_close)
+        self.pushButton_2.clicked.connect(self.fun_pushbutton_2)
+        self.pushButton_checklink.clicked.connect(self.fun_pushbutton_checklink)
         self.set_plot()
+        self.checklink = False
 
-    def fun_pushbutton_start(self):
+    def fun_pushbutton(self):
         global client
         self.enable = True
-        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        if self.enable:
+        client = socket.socket(AF_INET, SOCK_STREAM)
+        if self.enable == True:
             self.filename = time_name()
+
             try:
                 print(self.enable)
                 client.connect((HOST, PORT))
-                self.status_field.setText('开启中')
-                self.start()
+                self.textEdit.setText('开启中')
+                self.start(client)
             except Exception as e:
-                self.status_field.setText('连接失败')
+                self.textEdit.setText('连接失败')
                 print(e)
-        else:
-            self.status_field.setText('请先连接正确的设备')
+
+
+        self.textEdit.setText('请先连接正确的设备')
+        print(self.enable)
 
     def fun_pushbutton_close(self):
         self.enable = False
+
         try:
             client.close()
             self.receive_timer.stop()
-            self.status_field.setText('已关闭')
+            self.textEdit.setText('已关闭')
         except Exception as e:
-            self.status_field.setText('已关闭')
+            self.textEdit.setText('已关闭')
             print(e)
 
-    def fun_pushbutton_data(self):
-        with open(self.filename, 'r') as f:
-            reader = csv.reader(f)
-            data_list = [float(row[0]) for row in reader if row]
 
-        all_plt = pg.plot()
-        all_plt.setXRange(0, 2000)
-        all_plt.showGrid(x=True, y=True)
-        all_plt.plot(data_list, pen='w')
+    def fun_pushbutton_2(self):
+        pass
+        # TODO: Open data folder
 
-    def fun_pushbutton_link(self):
+    def fun_pushbutton_checklink(self):
         global HOST
         output = subprocess.check_output(cmd, shell=True).decode('gbk')
         ssid = re.search('SSID\\s+:\\s(.+)', output)
         ssid = ssid.group(1)[:-1]
         print(ssid)
         if ssid == 'wyc':
-            self.status_field.setText('连接中，请稍后')
-            self.status_field.repaint()
-            text_ip = self.input_field.toPlainText()
+            self.textEdit.setText('连接中，请稍后')
+            self.textEdit.repaint()
+            text_ip = self.textEdit_2.toPlainText()
             print(text_ip.isspace())
             HOST = text_ip
-            self.status_field.setText(f'''连接设备IP:{HOST}''')
+            self.textEdit.setText(f'''连接设备IP:{HOST}''')
         else:
-            self.status_field.setText(f'''请连接正确的wifi,当前{ssid}''')
+            self.textEdit.setText(f'''请连接正确的wifi,当前{ssid}''')
 
-    def start(self):
+    def start(self, client):
+        '''
+        while self.enable==True:
+            try:
+                array=receive_data(client)
+                # draw_matplotlib(array,self.ax,self.fig)
+
+                print(self.enable)
+
+            except Exception as e:
+                client.connect((HOST, PORT))
+                print(e)
+        '''
         self.receive_timer = QtCore.QTimer(self)
         self.receive_timer.timeout.connect(self.pyqtgraph_start)
         self.receive_timer.start(9)
 
     def set_plot(self):
-        pg.setConfigOptions(antialias=True)
-        self.layout = QtWidgets.QGridLayout(self.plot_widget)
-        self.plot_plt = pg.PlotWidget(self.plot_widget)
+        '''
+
+        # 创建画布
+        self.fig=plt.figure()
+
+        self.canvas=FigureCanvasQTAgg(self.fig)
+        # 画布放进widget组件，设定位置
+        self.vlayout=QVBoxLayout()
+        self.vlayout.addWidget(self.canvas)
+        self.widget.setLayout(self.vlayout)
+        #初始化matplotlib显示区域
+        self.ax=self.fig.add_subplot(111)
+        '''
+        pg.setConfigOptions(leftButtonPan=True, antialias=True)
+        self.layout = QtWidgets.QGridLayout(self.widget_plot)
+        self.plot_plt = pg.PlotWidget(self.widget_plot)
         self.plot_plt.showGrid(x=True, y=True)
         self.plot_plt.setLabel('left', '压力值(KPa)')
         self.layout.addWidget(self.plot_plt)
@@ -135,10 +131,15 @@ class Mine(UiDialog, QMainWindow):
         self.timer.start(1000)
 
     def get_cpu_info(self):
-        cpu = '%0.2f' % psutil.cpu_percent(interval=1)
-        self.data_list.append(float(cpu))
-        print(float(cpu))
-        self.plot_plt.plot().setData(self.data_list, pen='g')
+
+        try:
+            cpu = '%0.2f' % psutil.cpu_percent(interval=1)
+            self.data_list.append(float(cpu))
+            print(float(cpu))
+            self.plot_plt.plot().setData(self.data_list, pen='g')
+        except Exception as e:
+            print(traceback.print_exc())
+
 
     def random(self):
         num = np.random.uniform(1, 500)
@@ -149,6 +150,7 @@ class Mine(UiDialog, QMainWindow):
         self.plot_plt.plot().setData(self.array, pen='g')
 
     def pyqtgraph_start(self):
+
         try:
             self.array = receive_data(client, self.filename)
             self.array = moving_average(self.array, 20)
@@ -159,8 +161,7 @@ class Mine(UiDialog, QMainWindow):
             print(e)
 
 
-if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    window = Mine()
-    window.show()
-    sys.exit(app.exec())
+app = QtWidgets.QApplication(sys.argv)
+dialog = mine()
+dialog.show()
+sys.exit(app.exec_())

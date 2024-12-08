@@ -1,16 +1,11 @@
-"""
-Title: fun.py
-Author: 吴烨辰
-LastEditors: 高迎新
-"""
-import struct
+import csv
 import datetime
-
 from collections import deque
-
+import struct
 import pywifi
-import numpy as np
+from matplotlib import pyplot as plt
 from pywifi import const
+import numpy as np
 
 font = {
     'family': 'serif',
@@ -19,7 +14,7 @@ font = {
     'size': 16}
 data_deque = deque(maxlen=5000)
 count = 10
-new_data = [0] * count
+new_data = [0 for i in range(count)]
 
 
 def receive_data(client, filename):
@@ -30,94 +25,64 @@ def receive_data(client, filename):
         data_deque.append(force_value)
         new_data[i] = force_value
 
-    save_data(new_data, filename)
+    save(new_data, filename)
     print(data_deque)
     return data_deque
 
 
+def draw_matplotlib(array, ax, fig):
+    ax.set_ylabel('kpa', fontdict=font, loc='top', x=100)
+    ax.plot(array)
+    fig.canvas.draw()
+    fig.canvas.flush_events()
+    plt.cla()
+
+
+def draw_pyqtgraph(array, plot):
+    plot.plot().setData(array, pen='r')
+
+
 def time_name():
-    """
-    为 CSV 数据生成基于时间戳的文件名
-
-    Returns
-    -------
-    str
-        文件名格式 './YYYY-MM-DD HH.MM.SS.csv'
-    """
-    return f"./{datetime.datetime.now().strftime('%Y-%m-%d %H.%M.%S')}.csv"
+    now = datetime.datetime.now()
+    now_str = str(now)
+    now_str = now_str.replace(':', '.')
+    now_str = now_str[:18]
+    fp = './' + f'''{now_str}.csv'''
+    return fp
 
 
-def save_data(data, filename):
-    data = np.array(data).reshape(-1, 1)
+def save(data, filename):
+    data = list(map((lambda x: [x]), data))
+
     try:
-        np.savetxt(filename, data, delimiter=',', fmt='%g')
+        with open(filename, 'a', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerows(data)
     except Exception as e:
         print(f'保存数据到{filename}时出错: {str(e)}')
 
 
-def moving_average(data, window_size):
-    """
-    计算移动平均值
-
-    Parameters
-    ----------
-    data : array_like
-        输入数据数组
-    window_size : int
-        移动窗口大小
-
-    Returns
-    -------
-    ndarray
-        平滑后的数据数组
-    """
-    window = np.ones(window_size) / window_size
-    return np.convolve(data, window, mode='same')
+def moving_average(interval, windowsize):
+    window = np.ones(int(windowsize)) / float(windowsize)
+    re = np.convolve(interval, window, 'same')
+    return re
 
 
-def wifi_connect(ssid='ESP32', password='123456789', max_retries=3):
-    """
-    连接到Wi-Fi网络
-
-    Parameters
-    ----------
-    ssid : str, optional
-        网络名称 (默认: 'ESP32')
-    password : str, optional
-        网络密码 (默认: '123456789') 
-    max_retries : int, optional
-        最大重试连接次数 (默认: 3)
-
-    Returns
-    -------
-    bool
-        连接成功返回True，失败返回False
-    """
-    try:
-        wifi = pywifi.PyWiFi()
-        iface = wifi.interfaces()[0]
-        iface.disconnect()  # Ensure disconnected from any network
-        
-        # Configure network profile
-        profile = pywifi.Profile()
-        profile.ssid = ssid
-        profile.auth = const.AUTH_ALG_OPEN
-        profile.akm.append(const.AKM_TYPE_WPA2PSK)
-        profile.cipher = const.CIPHER_TYPE_CCMP
-        profile.key = password
-        
-        # Remove existing profiles and add new one
-        iface.remove_all_network_profiles()
-        tmp_profile = iface.add_network_profile(profile)
-        
-        # Try connecting with retries
-        for _ in range(max_retries):
-            iface.connect(tmp_profile)
-            if iface.status() == const.IFACE_CONNECTED:
-                return True
-        
-        return False
-        
-    except Exception as e:
-        print(f"Wi-Fi连接失败: {e}")
-        return False
+def wifi_connect():
+    SSID = 'ESP32'
+    password = '123456789'
+    wifi = pywifi.PyWiFi()
+    iface = wifi.interfaces()[0]
+    iface.disconnect()
+    profile = pywifi.Profile()
+    profile.ssid = SSID
+    profile.auth = const.AUTH_ALG_OPEN
+    profile.akm.append(const.AKM_TYPE_WPA2PSK)
+    profile.cipher = const.CIPHER_TYPE_CCMP
+    profile.key = password
+    iface.remove_all_network_profiles()
+    tmp_profile = iface.add_network_profile(profile)
+    iface.connect(tmp_profile)
+    iface.disconnect()
+    iface.connect(tmp_profile)
+    return iface.status() == const.IFACE_CONNECTED
