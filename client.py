@@ -28,10 +28,10 @@ class mine(Ui_Dialog, QMainWindow):
         self.setupUi(self)
         self.setCentralWidget(self.main_widget)
         self.enable = False
-        self.pushButton.clicked.connect(self.fun_pushbutton)
-        self.pushButton_close.clicked.connect(self.fun_pushbutton_close)
-        self.pushButton_2.clicked.connect(self.fun_pushbutton_2)
-        self.pushButton_checklink.clicked.connect(self.fun_pushbutton_checklink)
+        self.start_button.clicked.connect(self.fun_pushbutton)
+        self.stop_button.clicked.connect(self.fun_pushbutton_close)
+        self.data_button.clicked.connect(self.fun_pushbutton_2)
+        self.connect_button.clicked.connect(self.fun_pushbutton_checklink)
         self.set_plot()
         self.checklink = False
 
@@ -45,14 +45,14 @@ class mine(Ui_Dialog, QMainWindow):
             try:
                 print(self.enable)
                 client.connect((HOST, PORT))
-                self.textEdit.setText('开启中')
+                self.status_field.setText('开启中')
                 self.start(client)
             except Exception as e:
-                self.textEdit.setText('连接失败')
+                self.status_field.setText('连接失败')
                 print(e)
 
 
-        self.textEdit.setText('请先连接正确的设备')
+        self.status_field.setText('请先连接正确的设备')
         print(self.enable)
 
     def fun_pushbutton_close(self):
@@ -61,9 +61,9 @@ class mine(Ui_Dialog, QMainWindow):
         try:
             client.close()
             self.receive_timer.stop()
-            self.textEdit.setText('已关闭')
+            self.status_field.setText('已关闭')
         except Exception as e:
-            self.textEdit.setText('已关闭')
+            self.status_field.setText('已关闭')
             print(e)
 
 
@@ -78,14 +78,14 @@ class mine(Ui_Dialog, QMainWindow):
         ssid = ssid.group(1)[:-1]
         print(ssid)
         if ssid == 'wyc':
-            self.textEdit.setText('连接中，请稍后')
-            self.textEdit.repaint()
-            text_ip = self.textEdit_2.toPlainText()
+            self.status_field.setText('连接中，请稍后')
+            self.status_field.repaint()
+            text_ip = self.input_field.toPlainText()
             print(text_ip.isspace())
             HOST = text_ip
-            self.textEdit.setText(f'''连接设备IP:{HOST}''')
+            self.status_field.setText(f'''连接设备IP:{HOST}''')
         else:
-            self.textEdit.setText(f'''请连接正确的wifi,当前{ssid}''')
+            self.status_field.setText(f'''请连接正确的wifi,当前{ssid}''')
 
     def start(self, client):
         '''

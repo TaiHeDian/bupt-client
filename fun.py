@@ -31,7 +31,7 @@ def receive_data(client, filename):
 
 
 def draw_matplotlib(array, ax, fig):
-    ax.set_ylabel('kpa', fontdict=font, loc='top', x=100)
+    ax.set_ylabel('kPa', fontdict=font, loc='top', x=100)
     ax.plot(array)
     fig.canvas.draw()
     fig.canvas.flush_events()
